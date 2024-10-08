@@ -1,21 +1,37 @@
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
+
 dotenv.config();
 
 const connectionString = process.env.ATLAS_URI || "";
+console.log("MongoDB connection string:", connectionString);
 
-console.log(connectionString);
+const client = new MongoClient(connectionString, {
+    useNewUrlParser: true,  // Optional, adds new URL parsing logic
+    useUnifiedTopology: true // Optional, recommended to handle topology changes
+});
 
-const client = new MongoClient(connectionString);
+let db;
 
-let conn;
-try {
-    conn = await client.connect();
-    console.log('mongoDB is CONNECTED!!! :)');
-} catch(e) {
-    console.error(e)
-}
+const connectDB = async () => {
+    try {
+        await client.connect();
+        console.log('MongoDB is CONNECTED!!! :)');
+        db = client.db("APDS");
+    } catch (e) {
+        console.error('MongoDB connection error:', e);
+        process.exit(1); // Exit the process if unable to connect
+    }
+};
 
-let db = client.db("APDS");
+// Call the connect function
+connectDB();
+
+// Close the MongoDB client when the Node.js process ends
+process.on("SIGINT", async () => {
+    await client.close();
+    console.log("MongoDB connection closed");
+    process.exit(0);
+});
 
 export default db;

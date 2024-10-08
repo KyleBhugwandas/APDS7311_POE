@@ -1,7 +1,5 @@
-import express from "express";
-import db from "../db/conn.mjs";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+
+
 import ExpressBrute from "express-brute";
 
 const router = express.Router();
@@ -9,39 +7,47 @@ const router = express.Router();
 var store = new ExpressBrute.MemoryStore();
 var bruteforce = new ExpressBrute(store);
 
+import express from "express";
+import db from "../db/conn.mjs";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+
+// Signup route
 router.post("/signup", async (req, res) => {
   try {
-    // Properly await the hash result
-    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+    const { fullName, idNumber, accountNumber, password } = req.body;
 
-    // Create the new document with the hashed password
-    let newDocument = {
-      name: req.body.name,
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create the new user document
+    const newUser = {
+      fullName: fullName,
+      idNumber: idNumber,
+      accountNumber: accountNumber,
       password: hashedPassword
     };
 
-    // Insert the new user into the database
-    let collection = await db.collection("users");
-    let result = await collection.insertOne(newDocument);
-    
-    // Log the hashed password for debugging purposes
-    console.log(hashedPassword);
+    // Insert the user into the database
+    const collection = await db.collection("users");
+    const result = await collection.insertOne(newUser);
 
-    // Send a response
-    res.status(201).json(result);
+    res.status(201).json({ message: "User created successfully", userId: result.insertedId });
   } catch (error) {
     console.error("Signup error:", error);
-    res.status(500).json({ message: "Signup failed" });
+    res.status(500).json({ message: "Signup failed", error });
   }
 });
 
+
+// Login route
 router.post("/login", bruteforce.prevent, async (req, res) => {
-  const { name, password } = req.body;
-  console.log(name + " " + password);
+  const { fullName, accountNumber, password } = req.body;
+  console.log(fullName + " " + accountNumber + " " + password);
 
   try {
     const collection = await db.collection("users");
-    const user = await collection.findOne({ name });
+    const user = await collection.findOne({ fullName, accountNumber });
 
     if (!user) {
       return res.status(401).json({ message: "Authentication failed" });
@@ -54,9 +60,12 @@ router.post("/login", bruteforce.prevent, async (req, res) => {
       return res.status(401).json({ message: "Authentication failed" });
     } else {
       // Authentication successful
-      const token = jwt.sign({ username: req.body.username, password: req.body.password }, 
-        "this_secret_should_be_longer_than_it_is", { expiresIn: "1h" });
-      res.status(200).json({ message: "Authentication successful", token: token, name: req.body.name });
+      const token = jwt.sign(
+        { fullName: req.body.fullName, accountNumber: req.body.accountNumber },
+        "this_secret_should_be_longer_than_it_is",
+        { expiresIn: "1h" }
+      );
+      res.status(200).json({ message: "Authentication successful", token: token, fullName: req.body.fullName });
       console.log("Your new token is: ", token);
     }
   } catch (error) {

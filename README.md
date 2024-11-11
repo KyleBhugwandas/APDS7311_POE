@@ -214,5 +214,5 @@ ________________________________________________________________________________
  https://github.com/VCWVL/apds7311-part-2-DiegoBandle
 
 
- Group Link (This link was created by Sahendran Kandasami):
- https://github.com/Sahendran-Kandasami11/APDS7311_POE
+ Group Link (This link was created by Kyle Bhugwandas):
+ https://github.com/KyleBhugwandas/APDS7311_POE.git

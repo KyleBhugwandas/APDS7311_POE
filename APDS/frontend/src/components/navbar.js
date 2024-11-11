@@ -54,12 +54,12 @@ export default function Navbar() {
         <ul className="navbar-nav ms-auto">
           <li className="nav-item">
             <NavLink className="nav-link" to="/">
-              List
+              Home
             </NavLink>
           </li>
           <li className="nav-item">
             <NavLink className="nav-link" to="/create">
-              Create Post
+              Make Payment
             </NavLink>
           </li>
 

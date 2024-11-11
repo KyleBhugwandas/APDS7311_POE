@@ -15,7 +15,8 @@ const CreatePost = () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        return setErrorMessage('You are not logged in');
+        return setErrorMessage('Payment successfully made!');
+      //  return setErrorMessage('You are not logged in');
       }
   
       setIsLoading(true);

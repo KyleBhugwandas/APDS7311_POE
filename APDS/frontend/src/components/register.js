@@ -1,95 +1,160 @@
-import React, { useState } from "react";
-import './Register.css'; // Import CSS for additional styling
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';  // Corrected the import statement
 
 const Register = () => {
-  const [fullName, setFullName] = useState("");
-  const [idNumber, setIdNumber] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState('');
+  const [idNumber, setIdNumber] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState('user');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || 'https://localhost:5000';
+  const token = localStorage.getItem('jwtToken'); // Fetch token from localStorage
+
+  // Decode token to check for admin role
+  useEffect(() => {
+    if (token) {
+      try {
+        const decodedToken = jwtDecode(token); // Updated to use jwtDecode
+        setIsAdmin(decodedToken.role === 'admin');
+      } catch (error) {
+        console.error('Invalid token', error);
+        setError('Invalid session. Please log in again.');
+      }
+    }
+  }, [token]);
+
+  const validateAccountNumber = (account) => /^\d{10}$/.test(account);
+  const validatePassword = (pwd) => pwd.length >= 8;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Create the data object to be sent to the backend
+    if (!isAdmin) {
+      setError('You do not have permission to create a new account.');
+      return;
+    }
+
+    if (!validateAccountNumber(accountNumber)) {
+      setError('Account number must be a 10-digit number');
+      return;
+    }
+    if (!validatePassword(password)) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
     const userData = {
       fullName,
       idNumber,
       accountNumber,
       password,
+      role,
     };
 
     try {
-      // Make a POST request to your backend's register endpoint
-      const response = await fetch("http://localhost:3001/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData), // Send the user data as JSON
-      });
+      const response = await axios.post(
+        `${backendUrl}/api/employee/create-user`,
+        userData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      // Handle the response from the server
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Registration successful:", data);
-        // Optionally redirect to login or show a success message
-      } else {
-        console.error("Registration failed:", response.status);
+      if (response.status === 201) {
+        setSuccess('User successfully created');
+        setError('');
+        setFullName('');
+        setIdNumber('');
+        setAccountNumber('');
+        setPassword('');
+        setRole('user');
       }
-    } catch (error) {
-      console.error("Error:", error);
+    } catch (err) {
+      if (err.response && err.response.data) {
+        setError(err.response.data.message);
+      } else {
+        setError('An error occurred during registration');
+      }
+      setSuccess('');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="register-container">
-      <form className="register-form" onSubmit={handleSubmit}>
-        <h2>Register</h2>
-        <div className="form-group">
-          <label htmlFor="fullName">Full Name</label>
+    <div>
+      <h2>Register</h2>
+      <form onSubmit={handleSubmit}>
+        <div>
+          <label>Full Name</label>
           <input
             type="text"
-            id="fullName"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             required
           />
         </div>
-        <div className="form-group">
-          <label htmlFor="idNumber">ID Number</label>
+
+        <div>
+          <label>ID Number</label>
           <input
             type="text"
-            id="idNumber"
             value={idNumber}
             onChange={(e) => setIdNumber(e.target.value)}
             required
           />
         </div>
-        <div className="form-group">
-          <label htmlFor="accountNumber">Account Number</label>
+
+        <div>
+          <label>Account Number</label>
           <input
             type="text"
-            id="accountNumber"
             value={accountNumber}
             onChange={(e) => setAccountNumber(e.target.value)}
             required
           />
         </div>
-        <div className="form-group">
-          <label htmlFor="password">Password</label>
+
+        <div>
+          <label>Password</label>
           <input
             type="password"
-            id="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
         </div>
-        <button type="submit">Register</button>
-        <p className="register-footer">
-          Already have an account? <a href="/login">Login here</a>
-        </p>
+
+        <div>
+          <label>Role</label>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+          >
+            <option value="user">User</option>
+            <option value="employee">Employee</option>
+          </select>
+        </div>
+
+        <button type="submit" disabled={loading || !isAdmin}>
+          {loading ? 'Registering...' : 'Register'}
+        </button>
       </form>
+
+      {error && <div style={{ color: 'red' }}>{error}</div>}
+      {success && <div style={{ color: 'green' }}>{success}</div>}
     </div>
   );
 };
